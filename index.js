@@ -291,8 +291,13 @@ app.post('/api/create', (req, res) => {
     db.ipLimits[ip].count++;
     saveDB(db);
 
-    console.log(`[NEW] ${key} | IP: ${ip}`);
+    console.log(`[NEW KEY] ${key} | IP: ${ip}`);
     res.json({ success: true, key, expireAt: formatTime(expireAt) });
+});
+
+// ========== API PING (KEEP ALIVE) ==========
+app.get('/ping', (req, res) => {
+    res.status(200).send('pong');
 });
 
 // ========== API CHECK KEY ==========
@@ -356,7 +361,8 @@ app.get('/admin', (req, res) => {
 app.post('/admin/login', (req, res) => {
     const { user, pass } = req.body;
     if (user === ADMIN_USER && pass === ADMIN_PASS) {
-        res.redirect('/admin/panel?t=' + Buffer.from(user + ':' + pass).toString('base64'));
+        const token = Buffer.from(user + ':' + pass).toString('base64');
+        res.redirect('/admin/panel?t=' + encodeURIComponent(token));
     } else {
         res.send('<script>alert("Sai tài khoản!");location="/admin";</script>');
     }
@@ -429,14 +435,14 @@ app.get('/admin/panel', (req, res) => {
     const token = '${token}';
     async function deleteKey(key) {
         if (!confirm('Xóa key: ' + key + '?')) return;
-        const res = await fetch('/api/admin/delete?t=' + token + '&key=' + encodeURIComponent(key), { method: 'DELETE' });
+        const res = await fetch('/api/admin/delete?t=' + encodeURIComponent(token) + '&key=' + encodeURIComponent(key), { method: 'DELETE' });
         const data = await res.json();
         alert(data.message);
         location.reload();
     }
     async function deleteAll() {
         if (!confirm('XÓA TẤT CẢ KEY?')) return;
-        const res = await fetch('/api/admin/delete-all?t=' + token, { method: 'DELETE' });
+        const res = await fetch('/api/admin/delete-all?t=' + encodeURIComponent(token), { method: 'DELETE' });
         const data = await res.json();
         alert(data.message);
         location.reload();
