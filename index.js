@@ -260,6 +260,21 @@ app.get('/', (req, res) => {
         }
     }
     </script>
+    <script>
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('keydown', function(e) {
+        if (e.keyCode === 123) { e.preventDefault(); return false; }
+        if (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) { e.preventDefault(); return false; }
+        if (e.ctrlKey && e.keyCode === 85) { e.preventDefault(); return false; }
+    });
+    (function() {
+        setInterval(function() {
+            if (window.outerWidth - window.innerWidth > 160 || window.outerHeight - window.innerHeight > 160) {
+                document.body.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#1a1a2e;color:#ff5252;font-size:24px;">⛔ DevTools không được phép!</div>';
+            }
+        }, 500);
+    })();
+    </script>
 </body>
 </html>`);
 });
@@ -354,6 +369,21 @@ app.get('/admin', (req, res) => {
             <button type="submit" class="btn">Đăng nhập</button>
         </form>
     </div>
+    <script>
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('keydown', function(e) {
+        if (e.keyCode === 123) { e.preventDefault(); return false; }
+        if (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) { e.preventDefault(); return false; }
+        if (e.ctrlKey && e.keyCode === 85) { e.preventDefault(); return false; }
+    });
+    (function() {
+        setInterval(function() {
+            if (window.outerWidth - window.innerWidth > 160 || window.outerHeight - window.innerHeight > 160) {
+                document.body.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#1a1a2e;color:#ff5252;font-size:24px;">⛔ DevTools không được phép!</div>';
+            }
+        }, 500);
+    })();
+    </script>
 </body>
 </html>`);
 });
@@ -415,6 +445,16 @@ app.get('/admin/panel', (req, res) => {
         .del-btn { padding: 6px 12px; background: #ff5252; border: none; border-radius: 6px; color: #fff; cursor: pointer; font-size: 12px; }
         .del-btn:hover { background: #ff1744; }
         a { color: #00e676; text-decoration: none; }
+        .create-key-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 20px; margin: 20px 0; }
+        .create-key-box h3 { color: #ffd700; margin-bottom: 15px; font-size: 18px; }
+        .create-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .create-form input { padding: 12px 15px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: rgba(0,0,0,0.3); color: #fff; font-size: 14px; width: 180px; }
+        .create-form input:focus { outline: none; border-color: #00e676; }
+        .btn-create { background: linear-gradient(135deg, #667eea, #764ba2) !important; color: #fff !important; }
+        #createResult { margin-top: 15px; padding: 15px; border-radius: 10px; display: none; }
+        #createResult.success { background: rgba(0,200,83,0.15); border: 1px solid rgba(0,200,83,0.3); display: block; }
+        #createResult .key-display { font-family: monospace; font-size: 20px; color: #00e676; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; margin: 10px 0; word-break: break-all; }
+        #createResult .copy-key { padding: 8px 20px; background: #00e676; border: none; border-radius: 6px; color: #000; font-weight: 600; cursor: pointer; margin-right: 10px; }
     </style>
 </head>
 <body>
@@ -426,6 +466,15 @@ app.get('/admin/panel', (req, res) => {
     </div>
     <button class="btn" onclick="location.reload()">🔄 Làm mới</button>
     <button class="btn btn-danger" onclick="deleteAll()">🗑️ Xóa tất cả</button>
+    
+    <div class="create-key-box">
+        <h3>✨ Tạo Key Tùy Chỉnh</h3>
+        <div class="create-form">
+            <input type="number" id="keyDays" placeholder="Số ngày (VD: 30)" min="1" max="365">
+            <button class="btn btn-create" onclick="createCustomKey()">🔑 Tạo Key</button>
+        </div>
+        <div id="createResult"></div>
+    </div>
     <table>
         <tr><th>#</th><th>Key</th><th>Tạo lúc</th><th>Hết hạn</th><th>Trạng thái</th><th>IP</th><th>Xóa</th></tr>
         ${rows}
@@ -447,9 +496,76 @@ app.get('/admin/panel', (req, res) => {
         alert(data.message);
         location.reload();
     }
+    async function createCustomKey() {
+        const days = document.getElementById('keyDays').value;
+        const result = document.getElementById('createResult');
+        if (!days || days < 1) {
+            alert('Vui lòng nhập số ngày hợp lệ (1-365)!');
+            return;
+        }
+        try {
+            const res = await fetch('/api/admin/create-custom?t=' + encodeURIComponent(token) + '&days=' + days, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                const hours = days * 24;
+                result.className = 'success';
+                result.innerHTML = '<p>✅ Tạo key thành công!</p><div class="key-display">' + data.key + '</div><button class="copy-key" onclick="copyNewKey(\\'' + data.key + '\\')">📋 Copy</button><p style="color:#888;font-size:13px;">⏰ Hết hạn: ' + data.expireAt + ' (' + days + ' ngày = ' + hours + ' giờ)</p>';
+            } else {
+                alert('Lỗi: ' + data.message);
+            }
+        } catch(e) {
+            alert('Lỗi kết nối server!');
+        }
+    }
+    function copyNewKey(key) {
+        navigator.clipboard.writeText(key).then(function() {
+            alert('Đã copy key: ' + key);
+        });
+    }
+    </script>
+    <script>
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('keydown', function(e) {
+        if (e.keyCode === 123) { e.preventDefault(); return false; }
+        if (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) { e.preventDefault(); return false; }
+        if (e.ctrlKey && e.keyCode === 85) { e.preventDefault(); return false; }
+    });
+    (function() {
+        setInterval(function() {
+            if (window.outerWidth - window.innerWidth > 160 || window.outerHeight - window.innerHeight > 160) {
+                document.body.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#1a1a2e;color:#ff5252;font-size:24px;">⛔ DevTools không được phép!</div>';
+            }
+        }, 500);
+    })();
     </script>
 </body>
 </html>`);
+});
+
+// ========== API TẠO KEY TÙY CHỈNH (ADMIN) ==========
+app.post('/api/admin/create-custom', (req, res) => {
+    const token = req.query.t;
+    if (token !== Buffer.from(ADMIN_USER + ':' + ADMIN_PASS).toString('base64')) {
+        return res.json({ success: false, message: 'Unauthorized!' });
+    }
+
+    const days = parseInt(req.query.days);
+    if (!days || days < 1 || days > 365) {
+        return res.json({ success: false, message: 'Số ngày không hợp lệ (1-365)!' });
+    }
+
+    const db = loadDB();
+    const now = Date.now();
+    const key = genKey();
+    const createdAt = new Date().toISOString();
+    // Chuyển ngày sang giờ: days * 24 giờ
+    const expireAt = new Date(now + (days * 24 * 60 * 60 * 1000)).toISOString();
+
+    db.keys.push({ key, createdAt, expireAt, ip: 'ADMIN', used: false, customDays: days });
+    saveDB(db);
+
+    console.log(`[ADMIN KEY] ${key} | ${days} ngày (${days * 24} giờ)`);
+    res.json({ success: true, key, expireAt: formatTime(expireAt), days });
 });
 
 // ========== API XÓA KEY ==========
