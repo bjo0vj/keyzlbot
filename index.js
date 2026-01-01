@@ -576,10 +576,18 @@ app.delete('/api/admin/delete', (req, res) => {
     }
     const key = req.query.key;
     const db = loadDB();
-    const before = db.keys.length;
+
+    // Tìm key để lấy IP trước khi xóa
+    const keyData = db.keys.find(k => k.key === key);
+    if (keyData && keyData.ip && keyData.ip !== 'ADMIN' && db.ipLimits[keyData.ip]) {
+        // Hoàn lại lượt tạo key cho IP này
+        db.ipLimits[keyData.ip].count = Math.max(0, db.ipLimits[keyData.ip].count - 1);
+        console.log(`[REFUND] IP ${keyData.ip} được hoàn 1 lượt tạo key (còn ${db.ipLimits[keyData.ip].count}/${MAX_KEYS_PER_IP})`);
+    }
+
     db.keys = db.keys.filter(k => k.key !== key);
     saveDB(db);
-    res.json({ success: true, message: `Đã xóa key: ${key}` });
+    res.json({ success: true, message: `Đã xóa key: ${key} (IP được hoàn lượt tạo)` });
 });
 
 app.delete('/api/admin/delete-all', (req, res) => {
